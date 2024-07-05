@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: k9s-web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: k9s-web
+  template:
+    metadata:
+      labels:
+        app: k9s-web
+    spec:
+      containers:
+      - name: k9s-web
+        image: k9s-web-image
+        ports:
+        - containerPort: 3000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: k9s-web
+spec:
+  selector:
+    app: k9s-web
+  ports:
+    - protocol: TCP
+      port: 3000
+      targetPort: 3000
