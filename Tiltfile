@@ -1,14 +1,11 @@
-# Suppress unused image warning
 update_settings(suppress_unused_image_warnings=["k9s-web-deps"])
 
-# Ensure kind cluster is running
 local_resource(
     'ensure-cluster',
     cmd='kind get clusters | grep k9s-web || kind create cluster --name k9s-web',
     deps=[],
 )
 
-# Define a volume for node_modules
 docker_build(
     'k9s-web-deps',
     '.',
@@ -22,7 +19,6 @@ docker_build(
     ],
 )
 
-# Build the main application image
 docker_build(
     'k9s-web-image',
     '.',
@@ -34,14 +30,19 @@ docker_build(
     ],
 )
 
-# Deploy logging pods
 k8s_yaml('logging-deployment.yaml')
 
-# Deploy Next.js app
 k8s_yaml(kustomize('kubernetes'))
 
-# Port forward for Next.js app
-k8s_resource('k9s-web', port_forwards='3000:3000', resource_deps=['ensure-cluster'])
 
-# Configure the log-generator resource
+k8s_resource(
+    'k9s-web',
+    port_forwards='3000:3000',
+    resource_deps=['ensure-cluster'],
+    links=[
+        link('http://localhost:3000', 'App'),
+        link('http://localhost:3000/api/logs', 'Logs')
+    ]
+)
+
 k8s_resource('log-generator', resource_deps=['ensure-cluster'])

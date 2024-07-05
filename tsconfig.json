@@ -23,6 +23,7 @@
 			"@/*": ["./src/*"]
 		},
 		"types": ["node", "react"],
+		"typeRoots": ["./node_modules/@types", "./types"],
 		"noImplicitAny": true,
 		"noImplicitThis": true,
 		"strictNullChecks": true,
