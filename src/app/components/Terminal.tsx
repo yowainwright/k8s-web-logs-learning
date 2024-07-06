@@ -1,52 +1,41 @@
-import { useEffect, useRef } from 'react';
-import { Socket } from 'socket.io-client';
-import { Terminal } from '@xterm/xterm';
+"use client";
+
+import { useEffect, useRef, useState } from 'react';
+import { Terminal as XTerm } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
-import styles from '../styles/Terminal.module.css';
+import styles from '../Terminal.module.css';
 
-type TerminalComponentProps = {
-  socket: Socket;
-};
+interface TerminalProps {
+  logs: string;
+}
 
-export default function TerminalComponent({ socket }: TerminalComponentProps) {
+export default function Terminal({ logs }: TerminalProps) {
+  console.log({ logs, log: 'terminal logs' });
   const terminalRef = useRef<HTMLDivElement>(null);
-  const xtermRef = useRef<Terminal | null>(null);
+  const xtermRef = useRef<XTerm | null>(null);
+  const [prevLogsLength, setPrevLogsLength] = useState(0);
+  console.log({ terminalRef, xtermRef, prevLogsLength, log: 'terminal state' });
 
   useEffect(() => {
-    if (!xtermRef.current && terminalRef.current) {
-      xtermRef.current = new Terminal();
+    if (terminalRef.current && !xtermRef.current) {
+      xtermRef.current = new XTerm();
       const fitAddon = new FitAddon();
       xtermRef.current.loadAddon(fitAddon);
       xtermRef.current.open(terminalRef.current);
       fitAddon.fit();
-
-      xtermRef.current.onData((data: string) => {
-        const podIndex = parseInt(data) - 1;
-        if (!isNaN(podIndex) && podIndex >= 0) {
-          socket.emit('stream_logs', pods[podIndex]);
-        }
-      });
     }
 
-    socket.on('pod_list', (pods: string[]) => {
-      if (xtermRef.current) {
-        xtermRef.current.writeln('Available pods:');
-        pods.forEach((pod, index) => {
-          xtermRef.current?.writeln(`${index + 1}. ${pod}`);
-        });
-        xtermRef.current.writeln('Enter the number of the pod to stream logs:');
-      }
-    });
-
-    socket.on('log_line', (data: { pod: string; line: string }) => {
-      xtermRef.current?.writeln(`[${data.pod}] ${data.line}`);
-    });
+    if (xtermRef.current && logs.length > prevLogsLength) {
+      const newLines = logs.substring(prevLogsLength).split('\n');
+      newLines.forEach(line => xtermRef.current?.writeln(line));
+      setPrevLogsLength(logs.length);
+    }
 
     return () => {
-      socket.off('pod_list');
-      socket.off('log_line');
+      xtermRef.current?.dispose();
+      xtermRef.current = null;
     };
-  }, [socket]);
+  }, [logs, prevLogsLength]);
 
   return <div ref={terminalRef} className={styles.terminalContainer} />;
 }
