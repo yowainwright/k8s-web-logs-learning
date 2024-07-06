@@ -1,82 +1,86 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import io, { Socket } from 'socket.io-client';
 import dynamic from 'next/dynamic';
 
 const Terminal = dynamic(() => import('./Terminal'), { ssr: false });
 
-type TerminalWrapperProps = {
-  socket?: Socket | null;
-}
+type TerminalProps = {
+  logs: string; // Pass logs directly to the terminal
+};
 
 type PodsProps = {
   pods: string[];
-}
+  onPodSelect: (podName: string) => void; // Function to handle pod selection
+};
 
-type ClientDetailsProps = {
-  socket: Socket;
-  pods: string[];
-}
+const TerminalWrapper = ({ logs }: TerminalProps) => {
+  return <Terminal logs={logs} />;
+};
 
-export const TerminalWrapper = ({ socket }: TerminalWrapperProps) => {
-  if (!socket) return <div>Connecting...</div>;
-  return <Terminal socket={socket} />;
-}
-
-export const Pods = ({ pods }: PodsProps) => {
+const Pods = ({ pods, onPodSelect }: PodsProps) => {
   if (!pods || pods.length === 0) return null;
   return (
     <div>
       <h3>Available Pods:</h3>
       <ul>
-        {pods.map((pod, index) => (
-          <li key={index}>{pod}</li>
+        {pods.map((pod) => (
+          <li key={pod} onClick={() => onPodSelect(pod)}>
+            {pod}
+          </li>
         ))}
       </ul>
     </div>
   );
-}
-
-export const ClientDetails = ({ pods, socket }: ClientDetailsProps) => (
-    <div>
-      <h2>Checkout these logs!</h2>
-      <TerminalWrapper socket={socket} />
-      <Pods pods={pods} />
-    </div>
-  );
+};
 
 export default function Client() {
-  const [socket, setSocket] = useState<Socket | null>(null);
+  const [logs, setLogs] = useState('');
+  const [selectedPod, setSelectedPod] = useState<string | null>(null);
   const [pods, setPods] = useState<string[]>([]);
 
   useEffect(() => {
-  const newSocket = io({
-    path: '/api/socket',
-  });
+    const fetchPods = async () => {
+      const res = await fetch('/api/pods'); // Fetch the list of pods
+      if (res.ok) {
+        const data = await res.json();
+        setPods(data.pods);
+        setSelectedPod(data.pods[0]); // Select the first pod by default
+      }
+    };
 
-  newSocket.on('connect', () => {
-    console.log('Connected to server');
-    newSocket.emit('list_pods');
-  });
+    fetchPods(); // Fetch pods initially
+  }, []);
 
-  newSocket.on('connect_error', (error) => {
-    console.error('Connection Error:', error);
-  });
+  useEffect(() => {
+    const fetchLogs = async () => {
+      if (selectedPod) {
+        try {
+          const response = await fetch(`/api/logs/${selectedPod}`);
+          const logData = await response.text();
+          setLogs(logData);
+        } catch (error) {
+          console.error("Error fetching logs:", error);
+          setLogs('Error fetching logs');
+        }
+      }
+    };
 
-  newSocket.on('pod_list', (receivedPods) => {
-    console.log('Received pods:', receivedPods);
-    setPods(receivedPods);
-  });
+    fetchLogs(); // Fetch logs initially for the selected pod
+    const interval = setInterval(fetchLogs, 5000); // Fetch every 5 seconds
 
-  setSocket(newSocket);
+    return () => clearInterval(interval);
+  }, [selectedPod]);
 
-  return () => {
-    newSocket.disconnect();
+  const handlePodSelect = (podName: string) => {
+    setSelectedPod(podName);
   };
-}, []);
 
-  if (!socket || !pods) return <div>Connecting...</div>;
-
-  return (<ClientDetails socket={socket} pods={pods} />);
+  return (
+    <div>
+      <h2>Kubernetes Pod Logs</h2>
+      <TerminalWrapper logs={logs} />
+      <Pods pods={pods} onPodSelect={handlePodSelect} />
+    </div>
+  );
 }

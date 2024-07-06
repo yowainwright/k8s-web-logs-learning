@@ -1,36 +1,40 @@
 "use client";
 
-import { useEffect, useRef } from 'react';
-import { Socket } from 'socket.io-client';
+import { useEffect, useRef, useState } from 'react';
 import { Terminal as XTerm } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import styles from '../Terminal.module.css';
 
 interface TerminalProps {
-  socket: Socket;
+  logs: string;
 }
 
-export default function Terminal({ socket }: TerminalProps) {
+export default function Terminal({ logs }: TerminalProps) {
+  console.log({ logs});
   const terminalRef = useRef<HTMLDivElement>(null);
   const xtermRef = useRef<XTerm | null>(null);
+  const [prevLogsLength, setPrevLogsLength] = useState(0);
 
   useEffect(() => {
-    if (!xtermRef.current && terminalRef.current) {
+    if (terminalRef.current && !xtermRef.current) {
       xtermRef.current = new XTerm();
       const fitAddon = new FitAddon();
       xtermRef.current.loadAddon(fitAddon);
       xtermRef.current.open(terminalRef.current);
       fitAddon.fit();
+    }
 
-      socket.on('log_line', ({ pod, line }) => {
-        xtermRef.current?.writeln(`[${pod}] ${line}`);
-      });
+    if (xtermRef.current && logs.length > prevLogsLength) {
+      const newLines = logs.substring(prevLogsLength).split('\n');
+      newLines.forEach(line => xtermRef.current?.writeln(line));
+      setPrevLogsLength(logs.length);
     }
 
     return () => {
-      socket.off('log_line');
+      xtermRef.current?.dispose();
+      xtermRef.current = null;
     };
-  }, [socket]);
+  }, [logs, prevLogsLength]);
 
   return <div ref={terminalRef} className={styles.terminalContainer} />;
 }
