@@ -52,3 +52,5 @@ k8s_resource(
 )
 
 k8s_resource('log-generator', resource_deps=['ensure-cluster'])
+
+allow_k8s_contexts('.*')

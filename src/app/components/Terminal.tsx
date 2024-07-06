@@ -10,7 +10,7 @@ interface TerminalProps {
 }
 
 export default function Terminal({ logs }: TerminalProps) {
-  console.log({ logs});
+  console.log({ logs });
   const terminalRef = useRef<HTMLDivElement>(null);
   const xtermRef = useRef<XTerm | null>(null);
   const [prevLogsLength, setPrevLogsLength] = useState(0);

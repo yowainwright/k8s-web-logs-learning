@@ -13,7 +13,7 @@ metadata:
   name: pod-reader
   namespace: k8s-web
 rules:
-- apiGroups: [""]  # Core API group
+- apiGroups: [""] # Core API group
   resources: ["pods"]
   verbs: ["get", "list"]
 
@@ -47,6 +47,7 @@ spec:
       labels:
         app: k8s-web
     spec:
+      serviceAccountName: default  # Explicitly set the service account here
       containers:
       - name: k8s-web
         image: k8s-web-image

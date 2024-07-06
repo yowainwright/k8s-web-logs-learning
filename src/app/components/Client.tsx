@@ -6,12 +6,12 @@ import dynamic from 'next/dynamic';
 const Terminal = dynamic(() => import('./Terminal'), { ssr: false });
 
 type TerminalProps = {
-  logs: string; // Pass logs directly to the terminal
+  logs: string;
 };
 
 type PodsProps = {
   pods: string[];
-  onPodSelect: (podName: string) => void; // Function to handle pod selection
+  onPodSelect: (podName: string) => void;
 };
 
 const TerminalWrapper = ({ logs }: TerminalProps) => {
@@ -41,15 +41,16 @@ export default function Client() {
 
   useEffect(() => {
     const fetchPods = async () => {
-      const res = await fetch('/api/pods'); // Fetch the list of pods
+      const res = await fetch('/api/pods');
       if (res.ok) {
         const data = await res.json();
+        console.log({ data });
         setPods(data.pods);
-        setSelectedPod(data.pods[0]); // Select the first pod by default
+        setSelectedPod(data.pods[0]);
       }
     };
 
-    fetchPods(); // Fetch pods initially
+    fetchPods();
   }, []);
 
   useEffect(() => {
@@ -58,6 +59,7 @@ export default function Client() {
         try {
           const response = await fetch(`/api/logs/${selectedPod}`);
           const logData = await response.text();
+          console.log({ logData });
           setLogs(logData);
         } catch (error) {
           console.error("Error fetching logs:", error);
@@ -66,8 +68,8 @@ export default function Client() {
       }
     };
 
-    fetchLogs(); // Fetch logs initially for the selected pod
-    const interval = setInterval(fetchLogs, 5000); // Fetch every 5 seconds
+    fetchLogs();
+    const interval = setInterval(fetchLogs, 5000);
 
     return () => clearInterval(interval);
   }, [selectedPod]);
@@ -75,6 +77,8 @@ export default function Client() {
   const handlePodSelect = (podName: string) => {
     setSelectedPod(podName);
   };
+
+  console.log({ logs, pods });
 
   return (
     <div>
