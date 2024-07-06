@@ -1,42 +1,28 @@
-# k8s-web-deployment.yaml
 apiVersion: v1
 kind: Namespace
 metadata:
   name: k8s-web
 
 ---
-
-# pod-reader-role.yaml
 apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
+kind: ClusterRoleBinding
 metadata:
-  name: pod-reader
-  namespace: k8s-web
-rules:
-- apiGroups: [""] # Core API group
-  resources: ["pods"]
-  verbs: ["get", "list"]
-
----
-# read-pods-rolebinding.yaml
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: read-pods
-  namespace: k8s-web
+  name: default-view
 subjects:
 - kind: ServiceAccount
   name: default
+  namespace: k8s-web
 roleRef:
-  kind: Role
-  name: pod-reader
+  kind: ClusterRole
+  name: view  # Use the built-in "view" ClusterRole
   apiGroup: rbac.authorization.k8s.io
+
 ---
-# deployment.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: k8s-web
+  namespace: k8s-web
 spec:
   replicas: 1
   selector:
@@ -47,21 +33,22 @@ spec:
       labels:
         app: k8s-web
     spec:
-      serviceAccountName: default  # Explicitly set the service account here
       containers:
       - name: k8s-web
         image: k8s-web-image
         ports:
         - containerPort: 3000
+
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: k8s-web
+  namespace: k8s-web
 spec:
   selector:
     app: k8s-web
   ports:
-    - protocol: TCP
-      port: 3000
-      targetPort: 3000
+  - protocol: TCP
+    port: 3000
+    targetPort: 3000

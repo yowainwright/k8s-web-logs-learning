@@ -1,56 +1,31 @@
-update_settings(suppress_unused_image_warnings=["k8s-web-deps"])
-
+# Tiltfile
 local_resource(
     'ensure-cluster',
     cmd='kind get clusters | grep k8s-web || kind create cluster --name k8s-web',
-    deps=[],
 )
 
-docker_build(
-    'k8s-web-deps',
-    '.',
-    dockerfile='Dockerfile',
-    target='dependencies',
-    only=['package.json', 'pnpm-lock.yaml'],
-    live_update=[
-        sync('./', '/app'),
-        run('pnpm install', trigger=['package.json', 'pnpm-lock.yaml']),
-        run('pnpm build', trigger='./next.config.mjs')
-    ],
-)
-
+# Build your Docker image and load it into Kind
 docker_build(
     'k8s-web-image',
     '.',
     dockerfile='Dockerfile',
-    target='development',
-    live_update=[
-        sync('.', '/app'),
-        run('pnpm install', trigger='package.json'),
-    ],
+    build_args={'TARGET': 'development'},
 )
 
+# Manually load the image into Kind after building
+local_resource(
+    'load-k8s-web-image',
+    cmd='kind load docker-image k8s-web-image --name k8s-web',
+    deps=['k8s-web-image'],
+)
+# Apply your Kubernetes manifests
+k8s_yaml('k8s-web-deployment.yaml')
 k8s_yaml('logging-deployment.yaml')
 
-local_resource(
-    'create-namespace',
-    cmd='kubectl get namespace k8s-web || kubectl create namespace k8s-web',
-    deps=[],  # No dependencies
-)
 
-k8s_yaml('k8s-web-deployment.yaml')
-
-
+# Deploy your Next.js app (depends on the image being built)
 k8s_resource(
     'k8s-web',
-    port_forwards='3000:3000',
-    resource_deps=['ensure-cluster'],
-    links=[
-        link('http://localhost:3000', 'App'),
-        link('http://localhost:3000/api/logs', 'Logs')
-    ]
+    port_forwards=3000,  # Forward port 3000
+    resource_deps=['load-k8s-web-image']
 )
-
-k8s_resource('log-generator', resource_deps=['ensure-cluster'])
-
-allow_k8s_contexts('.*')
