@@ -17,5 +17,5 @@ k8s_yaml('logging-deployment.yaml')
 k8s_resource(
     'k8s-web',
     port_forwards=3000,
-    resource_deps=['ensure-cluster']
+    resource_deps=['ensure-cluster'],
 )
