@@ -1,6 +1,7 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+@import '@xterm/xterm/css/xterm.css';
 
 :root {
 	--foreground-rgb: 0, 0, 0;
@@ -30,4 +31,14 @@ body {
 	.text-balance {
 		text-wrap: balance;
 	}
+}
+
+.xterm {
+	font-family: monospace;
+	background-color: black;
+	color: white;
+}
+
+.xterm-viewport {
+	height: 300px;
 }

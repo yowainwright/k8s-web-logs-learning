@@ -1,25 +1,28 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-//
+import dynamic from 'next/dynamic';
 
-// const Terminal = dynamic(() => import('./Terminal'), { ssr: false });
+export const Terminal = dynamic(() => import('./Terminal'), { ssr: false });
 
-// type TerminalProps = {
-//   logs: string;
-// };
+export type TerminalProps = {
+  logs: string;
+  selectedPod: string | null;
+};
 
-type PodsProps = {
+export type PodsProps = {
   pods: string[];
   onPodSelect: (podName: string) => void;
 };
 
-// const TerminalWrapper = ({ logs }: TerminalProps) => {
-//   return <Terminal logs={logs} />;
-// };
+export const TerminalWrapper = ({ logs, selectedPod }: TerminalProps) => {
+  if (!selectedPod) return null;
+  if (!logs?.length) return <p>Loading logs...</p>;
+  return <Terminal logs={logs} />;
+};
 
-const Pods = ({ pods, onPodSelect }: PodsProps) => {
-  if (!pods || pods.length === 0) return null;
+export const Pods = ({ pods, onPodSelect }: PodsProps) => {
+  if (!pods.length) return <p>Loading pods...</p>;
   return (
     <div>
       <h3>Available Pods:</h3>
@@ -41,12 +44,17 @@ export default function Client() {
 
   useEffect(() => {
     const fetchPods = async () => {
-      const res = await fetch('/api/pods');
-      if (res.ok) {
+      try {
+        const res = await fetch('/api/pods');
+        if (!res.ok) throw new Error('Failed to fetch pods');
         const data = await res.json();
-        console.log({ data, pods: data?.pods, selectedPod: data?.pods[1], log: 'pod data' });
-        setPods(data.pods);
-        setSelectedPod(data.pods[0]);
+        const pods = data?.pods;
+        if (pods) setPods(pods);
+        const initialPod = pods?.[0];
+        if (initialPod) setSelectedPod(initialPod);
+      } catch (error) {
+        console.error("Error fetching pods:", error);
+        setPods(["Failed to fetch pods. Please try again later."]);
       }
     };
 
@@ -55,26 +63,25 @@ export default function Client() {
 
   useEffect(() => {
      const fetchLogs = async () => {
-    if (selectedPod) {
-      try {
-        const response = await fetch('/api/exec', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            command: ['kubectl', 'logs', selectedPod, '-n', 'k8s-web'],
-          }),
-        });
-        console.log({ response, log: 'log response' });
-        const logData = await response.text();
-        console.log({ logData, log: 'log data text' });
-        setLogs(logData);
-      } catch (error) {
-        console.error("Error fetching logs:", error);
+      if (selectedPod) {
+        try {
+          const response = await fetch('/api/exec', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              command: ['kubectl', 'logs', selectedPod, '-n', 'k8s-web'],
+            }),
+          });
+          const logData = await response.text();
+          if (logData) setLogs(logData);
+        } catch (error) {
+          console.error("Error fetching logs:", error);
+          setLogs("Failed to fetch logs. Please try again later.");
+        }
       }
-    }
-  };
+    };
 
     fetchLogs();
     const interval = setInterval(fetchLogs, 5000);
@@ -82,17 +89,15 @@ export default function Client() {
     return () => clearInterval(interval);
   }, [selectedPod]);
 
-  const handlePodSelect = (podName: string) => {
-    setSelectedPod(podName);
-  };
+  const handlePodSelect = (podName: string) => setSelectedPod(podName);
 
   console.log({ selectedPod, pods, log: 'pods info' });
 
   return (
     <div>
       <h2>Kubernetes Pod Logs</h2>
-      {/* <TerminalWrapper logs={logs} /> */}
       <Pods pods={pods} onPodSelect={handlePodSelect} />
+      <TerminalWrapper logs={logs} selectedPod={selectedPod} />
     </div>
   );
 }
