@@ -35,7 +35,7 @@ const Pods = ({ pods, onPodSelect }: PodsProps) => {
 };
 
 export default function Client() {
-  // const [logs, setLogs] = useState('');
+  const [logs, setLogs] = useState('');
   const [selectedPod, setSelectedPod] = useState<string | null>(null);
   const [pods, setPods] = useState<string[]>([]);
 
@@ -44,7 +44,7 @@ export default function Client() {
       const res = await fetch('/api/pods');
       if (res.ok) {
         const data = await res.json();
-        console.log({ data, pods: data?.pods, selectedPod: data?.pods[0], log: 'pod data' });
+        console.log({ data, pods: data?.pods, selectedPod: data?.pods[1], log: 'pod data' });
         setPods(data.pods);
         setSelectedPod(data.pods[0]);
       }
@@ -53,26 +53,34 @@ export default function Client() {
     fetchPods();
   }, []);
 
-  // useEffect(() => {
-  //   const fetchLogs = async () => {
-  //     if (selectedPod) {
-  //       try {
-  //         const response = await fetch(`/api/logs/${selectedPod}`);
-  //         const logData = await response.text();
-  //         console.log({ logData, log: 'log data' });
-  //         setLogs(logData);
-  //       } catch (error) {
-  //         console.error({ log: "Error fetching logs", error });
-  //         setLogs('Error fetching logs');
-  //       }
-  //     }
-  //   };
+  useEffect(() => {
+     const fetchLogs = async () => {
+    if (selectedPod) {
+      try {
+        const response = await fetch('/api/exec', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            command: ['kubectl', 'logs', selectedPod, '-n', 'k8s-web'],
+          }),
+        });
+        console.log({ response, log: 'log response' });
+        const logData = await response.text();
+        console.log({ logData, log: 'log data text' });
+        setLogs(logData);
+      } catch (error) {
+        console.error("Error fetching logs:", error);
+      }
+    }
+  };
 
-  //   fetchLogs();
-  //   const interval = setInterval(fetchLogs, 5000);
+    fetchLogs();
+    const interval = setInterval(fetchLogs, 5000);
 
-  //   return () => clearInterval(interval);
-  // }, [selectedPod]);
+    return () => clearInterval(interval);
+  }, [selectedPod]);
 
   const handlePodSelect = (podName: string) => {
     setSelectedPod(podName);
