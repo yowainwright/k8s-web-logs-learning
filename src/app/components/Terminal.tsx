@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Terminal as XTerm } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
-import styles from '../Terminal.module.css';
 
 interface TerminalProps {
   logs: string;
@@ -12,30 +11,31 @@ interface TerminalProps {
 export default function Terminal({ logs }: TerminalProps) {
   console.log({ logs, log: 'terminal logs' });
   const terminalRef = useRef<HTMLDivElement>(null);
-  const xtermRef = useRef<XTerm | null>(null);
-  const [prevLogsLength, setPrevLogsLength] = useState(0);
-  console.log({ terminalRef, xtermRef, prevLogsLength, log: 'terminal state' });
+  const [term, setTerm] = useState<XTerm | null>(null);
+  console.log({ logs, term, terminalRef, log: 'terminal state' });
 
   useEffect(() => {
-    if (terminalRef.current && !xtermRef.current) {
-      xtermRef.current = new XTerm();
-      const fitAddon = new FitAddon();
-      xtermRef.current.loadAddon(fitAddon);
-      xtermRef.current.open(terminalRef.current);
-      fitAddon.fit();
-    }
+    let terminal = null;
+    const fitAddon = new FitAddon();
 
-    if (xtermRef.current && logs.length > prevLogsLength) {
-      const newLines = logs.substring(prevLogsLength).split('\n');
-      newLines.forEach(line => xtermRef.current?.writeln(line));
-      setPrevLogsLength(logs.length);
+    if (terminalRef.current) {
+      terminal = new XTerm();
+      terminal.loadAddon(fitAddon);
+      terminal.open(terminalRef.current);
+      setTimeout(() => fitAddon.fit(), 300);
+      setTerm(terminal);
     }
 
     return () => {
-      xtermRef.current?.dispose();
-      xtermRef.current = null;
-    };
-  }, [logs, prevLogsLength]);
+      if (terminal) terminal.dispose();
+    }
+  }, []);
 
-  return <div ref={terminalRef} className={styles.terminalContainer} />;
+  useEffect(() => {
+    if (term) {
+      term.write(logs);
+    }
+  }, [logs, term]);
+
+  return <div ref={terminalRef} className="xterm" />;
 }
