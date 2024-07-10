@@ -1,6 +1,8 @@
 # K9s Web Logs Learning
 
-This is a project to learn how to stream kubernetes logs to a web page using websockets.
+This is a project to learn how to stream kubernetes logs to a web page. It works. Try it out!
+
+---
 
 ## Try it out
 
@@ -11,3 +13,11 @@ This is a project to learn how to stream kubernetes logs to a web page using web
 > [!NOTE]
 > *These commands assume you have `n` (or `nvm`) for node, `pnpm` for package management, and `kind` and `tilt` for Kubernetes installed.<br>
 > _Run `brew install n kind tilt ctlptrl` and `npm install pnpm -g` if not._
+
+---
+
+## About
+
+This project is a learning project to understand/learn/explain how to stream logs from a Kubernetes cluster to a web page.
+
+The project uses a simple [Next.js](https://nextjs.org/) app, [ShadCn](https://ui.shadcn.com/), and [Xterm.js](https://xtermjs.org/) to create a terminal-like experience in the browser.

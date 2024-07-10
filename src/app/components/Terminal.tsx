@@ -33,9 +33,10 @@ export default function Terminal({ logs }: TerminalProps) {
 
   useEffect(() => {
     if (term) {
-      term.write(logs);
+      const lines = logs.split('\n').map(line => line + '\n');
+      lines.forEach(line => term.write(line));
     }
   }, [logs, term]);
 
-  return <div ref={terminalRef} className="xterm" />;
+  return <div ref={terminalRef} className="xterm border border-solid border-2 rounded-lg overflow-hidden" />;
 }
