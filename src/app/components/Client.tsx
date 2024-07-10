@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
+import { Card, CardContent } from "@/components/ui/card";
+import { Pods } from './Pods';
 
 export const Terminal = dynamic(() => import('./Terminal'), { ssr: false });
 
@@ -10,37 +12,17 @@ export type TerminalProps = {
   selectedPod: string | null;
 };
 
-export type PodsProps = {
-  pods: string[];
-  onPodSelect: (podName: string) => void;
-};
-
 export const TerminalWrapper = ({ logs, selectedPod }: TerminalProps) => {
   if (!selectedPod) return null;
   if (!logs?.length) return <p>Loading logs...</p>;
   return <Terminal logs={logs} />;
 };
 
-export const Pods = ({ pods, onPodSelect }: PodsProps) => {
-  if (!pods.length) return <p>Loading pods...</p>;
-  return (
-    <div>
-      <h3>Available Pods:</h3>
-      <ul>
-        {pods.map((pod) => (
-          <li key={pod} onClick={() => onPodSelect(pod)}>
-            {pod}
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-};
-
 export default function Client() {
   const [logs, setLogs] = useState('');
   const [selectedPod, setSelectedPod] = useState<string | null>(null);
   const [pods, setPods] = useState<string[]>([]);
+  const [_, setIsLoadingPods] = useState(true);
 
   useEffect(() => {
     const fetchPods = async () => {
@@ -53,8 +35,9 @@ export default function Client() {
         const initialPod = pods?.[0];
         if (initialPod) setSelectedPod(initialPod);
       } catch (error) {
-        console.error("Error fetching pods:", error);
         setPods(["Failed to fetch pods. Please try again later."]);
+      } finally {
+        setIsLoadingPods(false);
       }
     };
 
@@ -77,8 +60,8 @@ export default function Client() {
           const logData = await response.text();
           if (logData) setLogs(logData);
         } catch (error) {
-          console.error("Error fetching logs:", error);
           setLogs("Failed to fetch logs. Please try again later.");
+        } finally {
         }
       }
     };
@@ -89,15 +72,14 @@ export default function Client() {
     return () => clearInterval(interval);
   }, [selectedPod]);
 
-  const handlePodSelect = (podName: string) => setSelectedPod(podName);
-
-  console.log({ selectedPod, pods, log: 'pods info' });
-
   return (
-    <div>
-      <h2>Kubernetes Pod Logs</h2>
-      <Pods pods={pods} onPodSelect={handlePodSelect} />
-      <TerminalWrapper logs={logs} selectedPod={selectedPod} />
-    </div>
+    <Card className="w-full max-w-3xl">
+      <CardContent>
+        <div className="py-4">
+          <Pods pods={pods} setSelectedPod={setSelectedPod} selectedPod={selectedPod} />
+        </div>
+        <TerminalWrapper logs={logs} selectedPod={selectedPod} />
+      </CardContent>
+    </Card>
   );
 }
